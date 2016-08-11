@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Routing name="environment">
+            <Routes pattern="$${ctx:environment}">
+                <Route>
+                    <RollingFile name="Rolling-${ctx:environment}" fileName="logs/InTouch-${ctx:environment}.log"
+                                 filePattern="./logs/${date:yyyy-MM}/${ctx:environment}-fixture-%d{yyyy-MM-dd}-%i.log.gz">
+                        <PatternLayout>
+                            <Pattern>%d{ddMMM-HHmmss} %highlight{%-5p [%.30c{1.}]  %m}%n</Pattern>
+                        </PatternLayout>
+                        <Policies>
+                            <SizeBasedTriggeringPolicy size="20 MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy min="1" max="2"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%t] %highlight{%-5level} %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="DEBUG">
+            <AppenderRef ref="environment"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
+
+

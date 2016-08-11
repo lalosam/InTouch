@@ -3,6 +3,7 @@ package com.rojosam.dto
 import java.lang.Iterable
 
 import akka.http.javadsl.model.HttpHeader
+import org.slf4j.LoggerFactory
 
 object Parameters {
   def  apply() = new Parameters()
@@ -14,7 +15,7 @@ object Parameters {
 
 class Parameters {
 
-
+  val log = LoggerFactory.getLogger(classOf[Parameters])
 
   private var _version:Option[String] = None
   private var _service:Option[String] = None
@@ -30,21 +31,27 @@ class Parameters {
         case (value, index) => (s"urlParam$index", List(value))
       }.toMap
     }
-    println(s"URL parameters added [$urlParam]")
+    log.debug(s"URL parameters added [$urlParam]")
     this
   }
 
   def addQueryParameters(qryParam: Map[String, List[String]]):Parameters = {
     _param = _param ++ qryParam.filterKeys(k => !k.startsWith("urlParam"))
-    println(s"Query parameters added [$qryParam]")
+    log.debug(s"Query parameters added [$qryParam]")
+    this
+  }
+
+  def addFormParameters(formParam: Map[String, List[String]]):Parameters = {
+    _param = _param ++ formParam.filterKeys(k => !k.startsWith("urlParam"))
+    log.debug(s"Form parameters added [$formParam]")
     this
   }
 
   def addHeaders(headers: Seq[HttpHeader]):Parameters = {
     // Remove Authorization header by security
-    _param = _param ++ headers.filter(h => !h.name().startsWith("urlParam") && h.name() != "Authorization").
+    _param = _param ++ headers.filter(h => !h.name().startsWith("urlParam")).
       map(h => (h.name(), List(h.value()))).toMap
-    println(s"Headers parameters added [$headers]")
+    log.debug(s"Headers parameters added [$headers]")
     this
   }
 

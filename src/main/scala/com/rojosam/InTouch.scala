@@ -7,60 +7,86 @@ import javax.net.ssl._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.directives.Credentials
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
+import akka.util.Timeout
 import com.rojosam.dto.{Parameters, UserDTO}
 import com.rojosam.pages.{DebugParameters, Error404}
+import com.rojosam.services.{InTouchDistpacher, Security}
 import com.typesafe.config.ConfigFactory
+import akka.pattern.ask
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.io.StdIn
 
 object InTouch {
 
+  val log = LoggerFactory.getLogger("com.rojosam.InTouch")
+
 
   def main(args: Array[String]) {
 
+
     implicit val system = ActorSystem("InTouch")
+    implicit val timeout = Timeout(15 seconds)
     implicit val materializer = ActorMaterializer()
     // needed for the future flatMap/onComplete in the end
     implicit val executionContext = system.dispatcher
 
     val config = ConfigFactory.load()
-    val host = config.getString("in-touch.host")
-    val port = config.getInt("in-touch.port")
+    val host = config.getString("InTouch.host")
+    val port = config.getInt("InTouch.port")
 
-    def myUserPassAuthenticator(credentials: Credentials): Future[Option[UserDTO]] =
-      credentials match {
-        case p@Credentials.Provided(id) =>
-          Future {
-            println(s"USER: $id")
-            if (p.verify("p4ssw0rd")) Some(UserDTO(id, List("ADMIN, DB")))
-            else None
-          }
-        case _ => Future.successful(None)
-      }
+    val distpacher = system.actorOf(InTouchDistpacher.props, name = "InTouchDispatcher")
+
+
 
     val route =
-      path(Segments) { s =>
-        authenticateBasicAsync(realm = config.getString("in-touch.realm"), myUserPassAuthenticator) { user =>
-          parameterMultiMap { params =>
-            extractRequest { req =>
-              val p = Parameters().addUrlParameters(s).addQueryParameters(params).addHeaders(req.headers)
-              get {
-                if (p.version.isEmpty) {
-                  if (s.nonEmpty) {
-                    s.head match {
-                      case "favicon.ico" => getFromResource("favicon.ico", ContentTypes.`application/octet-stream`)
-                      case _ => complete(Error404())
-                    }
-                  } else {
-                    println(s"INVALID REQUEST: [ ${s.mkString("/")} ]")
-                    complete(Error404())
-                  }
+      path(Segments) { pathSegments =>
+        authenticateBasicAsync(realm = config.getString("InTouch.realm"),
+          Security.myUserPassAuthenticator) { user =>
+          parameterMultiMap { queryParameters =>
+            formFieldMultiMap { formFields =>
+              extractRequest { req =>
+                val reqHeaders = req.headers.filter(h => h.name() != "Authorization")
+                val params = Parameters().addUrlParameters(pathSegments).addQueryParameters(queryParameters).
+                  addFormParameters(formFields).addHeaders(reqHeaders)
+                val r = distpacher ? params
+                r.foreach(f => log.debug(s"--------------> $f"))
+                if (req.getHeader("InTouch-Debug").isPresent &&
+                  req.getHeader("InTouch-Debug").get.value() == "true" && user.privileges.contains("ADMIN")) {
+                  log.info("DEBUG MODE: ON")
+                  complete(DebugParameters(user, pathSegments, queryParameters, formFields, reqHeaders, params, req.method))
                 } else {
-                  complete(DebugParameters(user, s, params, p))
+                  get {
+                    if (params.version.isEmpty) {
+                      if (pathSegments.nonEmpty) {
+                        pathSegments.head match {
+                          case "favicon.ico" => getFromResource("favicon.ico", ContentTypes.`application/octet-stream`)
+                          case _ => complete(Error404())
+                        }
+                      } else {
+                        log.error(s"INVALID REQUEST: [ ${pathSegments.mkString("/")} ]")
+                        complete(Error404())
+                      }
+                    } else {
+                      complete(Error404())
+                    }
+                  } ~
+                    put {
+                      complete(Error404())
+                    } ~
+                    post {
+
+                      log.debug(formFields.toString)
+
+                      complete(Error404())
+
+                    } ~
+                    delete {
+                      complete(Error404())
+                    }
                 }
               }
             }
@@ -68,10 +94,10 @@ object InTouch {
         }
       }
 
-    val password: Array[Char] = config.getString("in-touch.cert-password").toCharArray
+    val password: Array[Char] = config.getString("InTouch.cert.password").toCharArray
 
     val ks: KeyStore = KeyStore.getInstance("PKCS12")
-    val keystore: InputStream = getClass.getClassLoader.getResourceAsStream(config.getString("in-touch.cert-file"))
+    val keystore: InputStream = getClass.getClassLoader.getResourceAsStream(config.getString("InTouch.cert.file"))
 
     require(keystore != null, "Keystore required!")
     ks.load(keystore, password)
@@ -87,7 +113,7 @@ object InTouch {
     Http().setDefaultServerHttpContext(https)
     val bindingFuture = Http().bindAndHandle(route, host, port)
 
-    println(s"Server online at http://$host:$port/\nPress RETURN to stop...")
+    log.info(s"Server online at http://$host:$port/\nPress RETURN to stop...")
     StdIn.readLine() // let it run until user presses return
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
