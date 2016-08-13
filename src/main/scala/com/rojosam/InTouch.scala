@@ -5,12 +5,13 @@ import java.security.{KeyStore, SecureRandom}
 import javax.net.ssl._
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.marshalling.ToResponseMarshaller
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import com.rojosam.dto.{Parameters, UserDTO}
+import com.rojosam.dto.{BasicResponse, Parameters, ServicesDTO, UserDTO}
 import com.rojosam.pages.{DebugParameters, Error404}
 import com.rojosam.services.{InTouchDistpacher, Security}
 import com.typesafe.config.ConfigFactory
@@ -19,6 +20,7 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.io.StdIn
+import collection.JavaConversions._
 
 object InTouch {
 
@@ -27,20 +29,18 @@ object InTouch {
 
   def main(args: Array[String]) {
 
+    val config = ConfigFactory.load()
 
-    implicit val system = ActorSystem("InTouch")
+    implicit val system = ActorSystem("InTouch", config)
     implicit val timeout = Timeout(15 seconds)
     implicit val materializer = ActorMaterializer()
-    // needed for the future flatMap/onComplete in the end
     implicit val executionContext = system.dispatcher
 
-    val config = ConfigFactory.load()
     val host = config.getString("InTouch.host")
     val port = config.getInt("InTouch.port")
 
-    val distpacher = system.actorOf(InTouchDistpacher.props, name = "InTouchDispatcher")
-
-
+    val services = ServicesDTO.load(config.getObjectList("InTouch.services").toList)
+    val distpacher = system.actorOf(InTouchDistpacher.props(services), name = "InTouchDispatcher")
 
     val route =
       path(Segments) { pathSegments =>
@@ -52,41 +52,17 @@ object InTouch {
                 val reqHeaders = req.headers.filter(h => h.name() != "Authorization")
                 val params = Parameters().addUrlParameters(pathSegments).addQueryParameters(queryParameters).
                   addFormParameters(formFields).addHeaders(reqHeaders)
-                val r = distpacher ? params
-                r.foreach(f => log.debug(s"--------------> $f"))
                 if (req.getHeader("InTouch-Debug").isPresent &&
                   req.getHeader("InTouch-Debug").get.value() == "true" && user.privileges.contains("ADMIN")) {
-                  log.info("DEBUG MODE: ON")
+                  log.info("DEBUG MODE: ON - not service was called")
                   complete(DebugParameters(user, pathSegments, queryParameters, formFields, reqHeaders, params, req.method))
                 } else {
-                  get {
-                    if (params.version.isEmpty) {
-                      if (pathSegments.nonEmpty) {
-                        pathSegments.head match {
-                          case "favicon.ico" => getFromResource("favicon.ico", ContentTypes.`application/octet-stream`)
-                          case _ => complete(Error404())
-                        }
-                      } else {
-                        log.error(s"INVALID REQUEST: [ ${pathSegments.mkString("/")} ]")
-                        complete(Error404())
-                      }
-                    } else {
-                      complete(Error404())
+                  val r = distpacher ? params
+                  complete {
+                    r.map {
+                      case resp: BasicResponse => HttpResponse(status = resp.code, entity = HttpEntity(resp.message))
                     }
-                  } ~
-                    put {
-                      complete(Error404())
-                    } ~
-                    post {
-
-                      log.debug(formFields.toString)
-
-                      complete(Error404())
-
-                    } ~
-                    delete {
-                      complete(Error404())
-                    }
+                  }
                 }
               }
             }

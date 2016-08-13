@@ -1,22 +1,49 @@
 package com.rojosam.services
 
-import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorLogging, Props}
-import com.rojosam.dto.Parameters
+import akka.util.Timeout
+import com.rojosam.dto.{BasicResponse, Parameters, ResponseDTO}
+import com.rojosam.dto.ServicesDTO.{DBService, InTouchService, RestApiService, TransformService}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.pattern.{ask, pipe}
+
+import scala.concurrent.duration._
 
 
 object InTouchDistpacher {
-  def props = Props(classOf[InTouchDistpacher])
+  def props(services: Seq[InTouchService]) = Props(classOf[InTouchDistpacher], services)
 }
 
-class InTouchDistpacher extends Actor with ActorLogging {
+class InTouchDistpacher(services: Seq[InTouchService]) extends Actor with ActorLogging {
 
-  var count = 0
+  val errorActor = context.actorOf(ErrorActor.props)
+
+  implicit val timeout = Timeout(15 seconds)
+
+  val groupOfServices = services.groupBy {
+    case s: DBService => "db"
+    case s: RestApiService => "rest"
+    case s: TransformService => "transform"
+  }
+
+  val servicesType = groupOfServices.flatMap{ group =>
+    for(serv <- group._2)yield serv.id -> group._1
+  }
 
 
+  log.warning(servicesType.toString)
+
+  val servicesMap =  groupOfServices.map{ case (serviceType, servicesList) =>
+    serviceType match {
+      case "db" => "db" -> context.actorOf(DbDistpatcher.props(servicesList.asInstanceOf[List[DBService]]))
+      case "rest" => "rest" -> context.actorOf(RestDistpatcher.props(servicesList.asInstanceOf[List[RestApiService]]))
+    }
+  }
+
+  log.error(groupOfServices.toString())
+  log.info(servicesMap.toString())
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
@@ -44,9 +71,17 @@ class InTouchDistpacher extends Actor with ActorLogging {
 
   override def receive = {
     case p:Parameters =>
-      count += 1
-      log.info(s"*********** $count - $p")
-      sender ! s"ACTOR $count ->  $p"
+      if(p.version.isEmpty) {
+        sender ! BasicResponse(404, "Service not found")
+      }else{
+        val serviceType = servicesType.get(p.service.get)
+        if (serviceType.isDefined) {
+          val service = servicesMap.getOrElse(serviceType.get, errorActor)
+          pipe(service ? p) to sender
+        } else {
+          sender ! BasicResponse(404, s"Invalid service ->  ${p.version.get}@${p.service.get}")
+        }
+      }
     case _            =>
       sender ! "Other"
   }
