@@ -11,7 +11,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import com.rojosam.dto.{BasicResponse, Parameters, ServicesDTO, UserDTO}
+import com.rojosam.dto._
 import com.rojosam.pages.{DebugParameters, Error404}
 import com.rojosam.services.{InTouchDistpacher, Security}
 import com.typesafe.config.ConfigFactory
@@ -61,6 +61,7 @@ object InTouch {
                   complete {
                     r.map {
                       case resp: BasicResponse => HttpResponse(status = resp.code, entity = HttpEntity(resp.message))
+                      case resp: PayloadResponse => HttpResponse(status = resp.code, entity = HttpEntity(resp.payload.toString))
                     }
                   }
                 }

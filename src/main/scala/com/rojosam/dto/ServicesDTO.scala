@@ -17,12 +17,25 @@ object ServicesDTO {
 
   case class DBService(id:String,
                        version:String,
-                       dbName:String,
-                       dbUrl:String,
-                       dbPort:Int,
+                       url:String,
+                       driverClassName:String,
                        user:String,
                        password:String,
+                       validationQuery:String,
                        maxOpenConnections: Int) extends InTouchService
+
+  def configToDB(service: Config): InTouchService = {
+    DBService(
+      service.getString("id"),
+      service.getString("version"),
+      service.getString("url"),
+      service.getString("driverClassName"),
+      service.getString("user"),
+      service.getString("password"),
+      service.getString("validationQuery"),
+      service.getInt("maxOpenConnections")
+    )
+  }
 
   case class SSHService(id:String,
                         version:String,
@@ -55,19 +68,6 @@ object ServicesDTO {
       log.info(service.toString())
       service
     }
-  }
-
-  def configToDB(service: Config): InTouchService = {
-    DBService(
-      service.getString("id"),
-      service.getString("version"),
-      service.getString("dbName"),
-      service.getString("dbUrl"),
-      service.getInt("dbPort"),
-      service.getString("user"),
-      service.getString("password"),
-      service.getInt("maxOpenConnections")
-    )
   }
 
   def configToRest(service: Config): InTouchService = {

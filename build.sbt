@@ -11,9 +11,7 @@ libraryDependencies ++=  {
   val log4jVersion      = "2.6.2"
   val Json4sVersion     = "3.4.0"
   Seq(
-    "com.h2database"           %  "h2"                                % "1.4.192",
     "org.apache.derby"         %  "derby"                             % "10.12.1.1",
-    "com.typesafe.slick"       %% "slick"                             % "3.1.1",
     "com.typesafe"             %  "config"                            % "1.3.0",
     "com.typesafe.akka"        %% "akka-http-experimental"            % AkkaVersion,
     "com.typesafe.akka"        %% "akka-http-spray-json-experimental" % AkkaVersion,
@@ -23,6 +21,8 @@ libraryDependencies ++=  {
     "org.json4s"               %% "json4s-jackson"                    % Json4sVersion,
     "org.apache.logging.log4j" %  "log4j-core"                        % log4jVersion,
     "org.apache.logging.log4j" %  "log4j-api"                         % log4jVersion,
-    "org.apache.logging.log4j" %  "log4j-slf4j-impl"                  % log4jVersion
+    "org.apache.logging.log4j" %  "log4j-slf4j-impl"                  % log4jVersion,
+    "org.apache.tomcat"        %  "tomcat-jdbc"                       % "8.5.4",
+    "mysql"                    %  "mysql-connector-java"              % "5.1.17"
   )
 }
