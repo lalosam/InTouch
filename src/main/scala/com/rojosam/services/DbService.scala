@@ -1,11 +1,13 @@
 package com.rojosam.services
 
 import akka.actor.{Actor, ActorLogging, Props}
-import com.rojosam.dto.{PayloadResponse, ResultSet}
+import com.rojosam.dto.{BasicResponse, Parameters, PayloadResponse, ResultSet}
 import com.rojosam.dto.ServicesDTO.DBService
 import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
-import java.sql.{Connection}
+import java.sql.Connection
+
+import com.rojosam.sql.SqlParser
 
 import scala.collection.mutable
 
@@ -57,14 +59,17 @@ class DbService(service: DBService) extends Actor with ActorLogging {
 
 
 
-  def executeQuery(query:String):ResultSet.PayLoad = {
+  def executeQuery(query:String, params:Iterable[Any]):ResultSet.PayLoad = {
     var con: Connection = null
     val data = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[Any]]
     val metaData = mutable.ArrayBuffer.empty[ResultSet.Column]
     try {
       con = datasource.getConnection()
-      val st = con.createStatement()
-      val rs = st.executeQuery(query)
+      val st = con.prepareStatement(query)
+      for(p <- params.zipWithIndex){
+        st.setObject(p._2 + 1, p._1)
+      }
+      val rs = st.executeQuery()
       val md = rs.getMetaData
       for(i <- 1 to md.getColumnCount){
         metaData += ResultSet.Column(md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i))
@@ -93,9 +98,15 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   }
 
   override def receive: Receive = {
-    case _ =>
-      val result = executeQuery("select *, floor(rand() * 100) as \"rnd\" from intouch.test")
-      log.warning(result.toString)
-      sender ! PayloadResponse(200, "DbService Call", result)
+    case p:Parameters =>
+      val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
+      val parsedQuery = SqlParser.parse(query, p.parameters)
+      val resp = parsedQuery match {
+        case Some((query, parameters)) =>
+          val result = executeQuery(query, parameters)
+          PayloadResponse(200, "DbService Call", result)
+        case None => BasicResponse(404, "Invalid parameters")
+      }
+      sender ! resp
   }
 }
