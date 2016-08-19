@@ -5,10 +5,11 @@ import com.rojosam.dto.{BasicResponse, Parameters, PayloadResponse, ResultSet}
 import com.rojosam.dto.ServicesDTO.DBService
 import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
-import java.sql.Connection
+import java.sql.{Connection, SQLException}
+
+import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
 
 import collection.JavaConversions._
-
 import com.rojosam.sql.SqlParser
 
 import scala.collection.mutable
@@ -23,7 +24,7 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   val config = context.system.settings.config.getConfig("InTouch." + service.id)
 
   val entityMap = config.getConfigList("entities").toList.
-    map(e => s"v${e.getString("version")}@${e.getString("id")}" -> e.getString("query")).toMap
+    map(e => s"${e.getString("type")}@v${e.getString("version")}@${e.getString("id")}" -> e.getString("query")).toMap
 
   var datasource:DataSource = _
 
@@ -60,6 +61,32 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   }
 
 
+  def updateQuery(query:String, params:Iterable[Any]):Int = {
+    var count = 0
+    var con: Connection = null
+    try {
+      con = datasource.getConnection()
+      val st = con.prepareStatement(query)
+      for(p <- params.zipWithIndex){
+        st.setObject(p._2 + 1, p._1)
+      }
+      count = st.executeUpdate()
+      st.close()
+    } catch {
+      case sqlE:SQLException => log.error(sqlE, s"Vendor error code: ${sqlE.getErrorCode}, SQL State: ${sqlE.getSQLState}")
+      case e:Exception => log.error(e, "DbService error")
+    }finally {
+      if (con!=null){
+        try {
+          con.close()
+        }catch {
+          case e:Exception => log.error(e, "DbService error closing DB connection")
+        }
+      }
+    }
+    log.warning(count.toString)
+    count
+  }
 
 
   def executeQuery(query:String, params:Iterable[Any]):ResultSet.DbPayLoad = {
@@ -87,6 +114,7 @@ class DbService(service: DBService) extends Actor with ActorLogging {
       rs.close()
       st.close()
     } catch {
+      case sqlE:SQLException => log.error(sqlE, s"${sqlE.getErrorCode}, ${sqlE.getSQLState}")
       case e:Exception => log.error(e, "DbService error")
     }finally {
       if (con!=null){
@@ -103,14 +131,23 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   override def receive: Receive = {
     case p:Parameters =>
       // val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
-      val query = entityMap.getOrElse(s"${p.version.get}@${p.entityId.get}", "")
+      val query = entityMap.getOrElse(s"${p.method.get}@${p.version.get}@${p.entityId.get}", "")
       val parsedQuery = SqlParser.parse(query, p.parameters)
       val resp = parsedQuery match {
-        case Some(("", parameters)) => BasicResponse(404, "Invalid Entity")
+        case Some(("", parameters)) => BasicResponse(404, "Invalid Operation")
         case Some((query, parameters)) =>
-          val result = executeQuery(query, parameters)
-          PayloadResponse(200, "DbService Call", result)
-        case None => BasicResponse(404, "Invalid parameters")
+          p.method.get match {
+            case "GET" =>
+              val result = executeQuery (query, parameters)
+              PayloadResponse (200, "DbService Call", result)
+            case "POST" =>
+              val count = updateQuery(query, parameters)
+              if (count > 0) BasicResponse(201, "Item Created") else BasicResponse(409, "Already Exist")
+            case "PUT" =>
+              val count = updateQuery(query, parameters)
+              if (count > 0) BasicResponse(200, "Item Updated") else BasicResponse(404, "Item not found")
+          }
+        case None => BasicResponse(404, "Invalid Parameters")
       }
       sender ! resp
   }

@@ -51,7 +51,7 @@ object InTouch {
               extractRequest { req =>
                 val reqHeaders = req.headers.filter(h => h.name() != "Authorization")
                 val params = Parameters().addUrlParameters(pathSegments).addQueryParameters(queryParameters).
-                  addFormParameters(formFields).addHeaders(reqHeaders)
+                  addFormParameters(formFields).addHeaders(reqHeaders).addMethod(req.method.value)
                 if (req.getHeader("InTouch-Debug").isPresent &&
                   req.getHeader("InTouch-Debug").get.value() == "true" && user.privileges.contains("ADMIN")) {
                   log.info("DEBUG MODE: ON - not service was called")

@@ -20,6 +20,7 @@ class Parameters {
   private var _version:Option[String] = None
   private var _service:Option[String] = None
   private var _entityId:Option[String] = None
+  private var _method:Option[String] = None
   private var _param =  Map[String, List[String]]().withDefaultValue(List())
 
   def addUrlParameters(urlParam: List[String]):Parameters = {
@@ -55,10 +56,17 @@ class Parameters {
     this
   }
 
-  override def toString = s"Parameters(${_version}, ${_service}, ${_entityId}, ${_param})"
+  def addMethod(method:String):Parameters = {
+    _method = Some(method)
+    this
+  }
 
-  def version = _version
-  def service = _service
-  def entityId = _entityId
+  override def toString = s"Parameters(${_version}, ${_service}, ${_entityId}, ${_method}, ${_param})"
+
+  def version    = _version
+  def service    = _service
+  def entityId   = _entityId
   def parameters = _param
+  def method     = _method
+
 }

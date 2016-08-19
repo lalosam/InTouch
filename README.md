@@ -2,7 +2,7 @@
 
 #### Generic Rest API based on AKKA HTTP
 
-The main idea of this project is to develop a generic API using conventions over custom developments to expose other services like DB with a simple configuration steps.
+The main idea of this project is to develop a generic API using conventions and configurtions over custom developments to expose with control and security other services like DB with a simple configuration steps.
 
 
     http --verify=no -a MyName:p4ssw0rd GET https://localhost:8080/v2/dbService1/test/17 v==value1 v==value2 v==value3 v==value4 InTouch-Debug:true
