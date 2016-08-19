@@ -7,6 +7,8 @@ import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
 import java.sql.Connection
 
+import collection.JavaConversions._
+
 import com.rojosam.sql.SqlParser
 
 import scala.collection.mutable
@@ -18,9 +20,10 @@ object DbService {
 
 class DbService(service: DBService) extends Actor with ActorLogging {
 
-  val config = context.system.settings.config
+  val config = context.system.settings.config.getConfig("InTouch." + service.id)
 
-  println(config.toString.substring(0, 600))
+  val entityMap = config.getConfigList("entities").toList.
+    map(e => s"v${e.getString("version")}@${e.getString("id")}" -> e.getString("query")).toMap
 
   var datasource:DataSource = _
 
@@ -59,7 +62,7 @@ class DbService(service: DBService) extends Actor with ActorLogging {
 
 
 
-  def executeQuery(query:String, params:Iterable[Any]):ResultSet.PayLoad = {
+  def executeQuery(query:String, params:Iterable[Any]):ResultSet.DbPayLoad = {
     var con: Connection = null
     val data = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[Any]]
     val metaData = mutable.ArrayBuffer.empty[ResultSet.Column]
@@ -94,14 +97,16 @@ class DbService(service: DBService) extends Actor with ActorLogging {
         }
       }
     }
-    ResultSet.PayLoad(metaData, data)
+    ResultSet.DbPayLoad(metaData, data)
   }
 
   override def receive: Receive = {
     case p:Parameters =>
-      val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
+      // val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
+      val query = entityMap.getOrElse(s"${p.version.get}@${p.entityId.get}", "")
       val parsedQuery = SqlParser.parse(query, p.parameters)
       val resp = parsedQuery match {
+        case Some(("", parameters)) => BasicResponse(404, "Invalid Entity")
         case Some((query, parameters)) =>
           val result = executeQuery(query, parameters)
           PayloadResponse(200, "DbService Call", result)
