@@ -22,6 +22,7 @@ class Parameters {
   private var _entityId:Option[String] = None
   private var _method:Option[String] = None
   private var _param =  Map[String, List[String]]().withDefaultValue(List())
+  private var _user:Option[UserDTO] = None
 
   def addUrlParameters(urlParam: List[String]):Parameters = {
     if(urlParam.length > 2) {
@@ -61,12 +62,18 @@ class Parameters {
     this
   }
 
-  override def toString = s"Parameters(${_version}, ${_service}, ${_entityId}, ${_method}, ${_param})"
+  def addUser(user:UserDTO):Parameters = {
+    _user = Some(user)
+    this
+  }
+
+  override def toString = s"Parameters(${_version}, ${_service}, ${_entityId}, ${_method}, ${_param}, ${_user})"
 
   def version    = _version
   def service    = _service
   def entityId   = _entityId
   def parameters = _param
   def method     = _method
+  def user       = _user
 
 }

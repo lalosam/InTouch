@@ -24,7 +24,8 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   val config = context.system.settings.config.getConfig("InTouch." + service.id)
 
   val entityMap = config.getConfigList("entities").toList.
-    map(e => s"${e.getString("type")}@v${e.getString("version")}@${e.getString("id")}" -> e.getString("query")).toMap
+    map(e => s"${e.getString("type")}@v${e.getString("version")}@${e.getString("id")}" ->
+      (e.getString("query"), e.getStringList("roles").toSet)).toMap
 
   var datasource:DataSource = _
 
@@ -84,7 +85,6 @@ class DbService(service: DBService) extends Actor with ActorLogging {
         }
       }
     }
-    log.warning(count.toString)
     count
   }
 
@@ -131,11 +131,16 @@ class DbService(service: DBService) extends Actor with ActorLogging {
   override def receive: Receive = {
     case p:Parameters =>
       // val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
-      val query = entityMap.getOrElse(s"${p.method.get}@${p.version.get}@${p.entityId.get}", "")
-      val parsedQuery = SqlParser.parse(query, p.parameters)
-      val resp = parsedQuery match {
-        case Some(("", parameters)) => BasicResponse(404, "Invalid Operation")
-        case Some((query, parameters)) =>
+      val queryAndRoles = entityMap.getOrElse(s"${p.method.get}@${p.version.get}@${p.entityId.get}", ("", Set("")))
+      val grantedAccess = queryAndRoles._2.intersect(p.user.get.privileges).nonEmpty
+      val resp = if(!grantedAccess){
+        BasicResponse(403, "Forbidden")
+      } else if(queryAndRoles._1.length == 0 ) {
+        BasicResponse(404, "Invalid Operation")
+      }else{
+        val parsedQuery = SqlParser.parse(queryAndRoles._1, p.parameters)
+        if(parsedQuery.isDefined){
+          val (query, parameters) = parsedQuery.get
           p.method.get match {
             case "GET" =>
               val result = executeQuery (query, parameters)
@@ -146,8 +151,13 @@ class DbService(service: DBService) extends Actor with ActorLogging {
             case "PUT" =>
               val count = updateQuery(query, parameters)
               if (count > 0) BasicResponse(200, "Item Updated") else BasicResponse(404, "Item not found")
+            case "DELETE" =>
+              val count = updateQuery(query, parameters)
+              if (count > 0) BasicResponse(200, "Item Deleted") else BasicResponse(404, "Item not found")
           }
-        case None => BasicResponse(404, "Invalid Parameters")
+        }else{
+          BasicResponse(404, "Invalid Parameters")
+        }
       }
       sender ! resp
   }

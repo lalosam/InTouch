@@ -16,7 +16,7 @@ object Security {
       case p@Credentials.Provided(id) =>
         Future {
           log.info(s"USER: $id")
-          if (p.verify("p4ssw0rd")) Some(UserDTO(id, List("ADMIN", "DB")))
+          if (p.verify("p4ssw0rd")) Some(UserDTO(id, Set("ADMIN", "DB", "DBSERV1")))
           else None
         }
       case _ => Future.successful(None)
