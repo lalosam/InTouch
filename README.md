@@ -5,6 +5,24 @@
 The main idea of this project is to develop a generic API using conventions over custom developments to expose other services like DB with a simple configuration steps.
 
 
-    http --verify=no -a MyName:p4ssw0rd GET https://localhost:8080/v1/servA/EntityID/A/B/C/D/E?a=123 InTouch-Debug:true
+    http --verify=no -a MyName:p4ssw0rd GET https://localhost:8080/v2/dbService1/test/17 v==value1 v==value2 v==value3 v==value4 InTouch-Debug:true
+    http --verify=no -a MyName:p4ssw0rd GET https://localhost:8080/v2/dbService1/test/17 v==value1 v==value2 v==value3 v==value4
 
-    curl --insecure --user MyName:p4ssw0rd --header "InTouch-Debug:true" https://127.0.0.1:8080/v1/servA/EntityID?a=123&a=345&b=333333&urlParam0=99125654645645
+    curl --insecure --user MyName:p4ssw0rd --header "InTouch-Debug:true" https://127.0.0.1:8080/v2/dbService1/test/17?v=value1&v=value2&v=value3&v=value4
+
+
+##### URL Anatomy
+
+> https://localhost:8080/v2/dbService1/test/17
+
+| VALUE            | DESCRIPTION                                                                                                                 |
+|-----------------:|-----------------------------------------------------------------------------------------------------------------------------|
+| https            | Protocol, always HTTP over SSL to protect your data                                                                         |
+| localhost        | The API host                                                                                                                |
+| 8080             | The port used to service the API                                                                                            |
+| v2               | The version of the API for an easy upgrade without brake current implementation. A "v" (lower case) followed by an Integer  |
+| dbService1       | The service that should respond the request. Like the DB connection (configurable)                                          |
+| test             | The Entity ID, the name of the object requested.The object to retrieve, insert, update, etc . . .  (configurable)           |
+| 17/. . .         | The remaining URL segments will be converted to parameters with the names: urlParam0, urlParam1, . . . (by convention)      |
+| Query Parameters | The parameters specified in the query could be replaced in the services requests. Like named parameters in the query string |
+
