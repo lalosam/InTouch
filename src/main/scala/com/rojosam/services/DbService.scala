@@ -1,7 +1,7 @@
 package com.rojosam.services
 
 import akka.actor.{Actor, ActorLogging, Props}
-import com.rojosam.dto.{BasicResponse, Parameters, PayloadResponse, ResultSet}
+import com.rojosam.dto.{BasicResponse, Parameters, DBPayloadResponse, ResultSet}
 import com.rojosam.dto.ServicesDTO.DBService
 import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
@@ -25,7 +25,9 @@ class DbService(service: DBService) extends Actor with ActorLogging {
 
   val entityMap = config.getConfigList("entities").toList.
     map(e => s"${e.getString("type")}@v${e.getString("version")}@${e.getString("id")}" ->
-      (e.getString("query"), e.getStringList("roles").toSet)).toMap
+      (e.getStringList("query").toList.mkString(" "), e.getStringList("roles").toSet)).toMap
+
+
 
   var datasource:DataSource = _
 
@@ -102,7 +104,7 @@ class DbService(service: DBService) extends Actor with ActorLogging {
       val rs = st.executeQuery()
       val md = rs.getMetaData
       for(i <- 1 to md.getColumnCount){
-        metaData += ResultSet.Column(md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i))
+        metaData += ResultSet.Column(md.getColumnLabel(i), md.getColumnType(i), md.getColumnTypeName(i))
       }
       while (rs.next()) {
         val record = mutable.ArrayBuffer.empty[Any]
@@ -133,18 +135,18 @@ class DbService(service: DBService) extends Actor with ActorLogging {
       // val query = "select *, floor(rand() * 100) as \"rnd\" from intouch.test where value in (${v}) and number > ${urlParam0}"
       val queryAndRoles = entityMap.getOrElse(s"${p.method.get}@${p.version.get}@${p.entityId.get}", ("", Set("")))
       val grantedAccess = queryAndRoles._2.intersect(p.user.get.privileges).nonEmpty
-      val resp = if(!grantedAccess){
-        BasicResponse(403, "Forbidden")
-      } else if(queryAndRoles._1.length == 0 ) {
+      val resp = if(queryAndRoles._1.length == 0 ) {
         BasicResponse(404, "Invalid Operation")
-      }else{
+      } else if(!grantedAccess){
+        BasicResponse(403, "Forbidden")
+      } else{
         val parsedQuery = SqlParser.parse(queryAndRoles._1, p.parameters)
         if(parsedQuery.isDefined){
           val (query, parameters) = parsedQuery.get
           p.method.get match {
             case "GET" =>
               val result = executeQuery (query, parameters)
-              PayloadResponse (200, "DbService Call", result)
+              if(result.data.size == 0) BasicResponse(404, "Item not found") else DBPayloadResponse(200, "DbService Call", result)
             case "POST" =>
               val count = updateQuery(query, parameters)
               if (count > 0) BasicResponse(201, "Item Created") else BasicResponse(409, "Already Exist")

@@ -6,4 +6,4 @@ trait ResponseDTO {
 }
 
 case class BasicResponse(code: Int, message:String) extends ResponseDTO
-case class PayloadResponse(code: Int, message:String, payload:ResultSet.DbPayLoad) extends ResponseDTO
+case class DBPayloadResponse(code: Int, message:String, payload:ResultSet.DbPayLoad) extends ResponseDTO

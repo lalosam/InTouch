@@ -22,7 +22,11 @@ object ServicesDTO {
                        user:String,
                        password:String,
                        validationQuery:String,
-                       maxOpenConnections: Int) extends InTouchService
+                       maxOpenConnections: Int) extends InTouchService {
+    override def toString: String = {
+      s"DBService($id, $version, $url, $driverClassName, $user, $validationQuery, $maxOpenConnections)"
+    }
+  }
 
   def configToDB(service: Config): InTouchService = {
     DBService(

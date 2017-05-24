@@ -5,7 +5,7 @@ import java.security.{KeyStore, SecureRandom}
 import javax.net.ssl._
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.marshalling.ToResponseMarshaller
+import akka.http.scaladsl.marshalling.{Marshal, ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
@@ -16,13 +16,14 @@ import com.rojosam.pages.{DebugParameters, Error404}
 import com.rojosam.services.{InTouchDistpacher, Security}
 import com.typesafe.config.ConfigFactory
 import akka.pattern.ask
+import com.rojosam.marshallers.{DbPlayLoadMarshaller, Unmarshallers}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.io.StdIn
 import collection.JavaConversions._
 
-object InTouch {
+object InTouch extends DbPlayLoadMarshaller with Unmarshallers{
 
   val log = LoggerFactory.getLogger("com.rojosam.InTouch")
 
@@ -47,11 +48,12 @@ object InTouch {
         authenticateBasicAsync(realm = config.getString("InTouch.realm"),
           Security.myUserPassAuthenticator) { user =>
           parameterMultiMap { queryParameters =>
-            formFieldMultiMap { formFields =>
-              extractRequest { req =>
-                val reqHeaders = req.headers.filter(h => h.name() != "Authorization")
-                val params = Parameters().addUrlParameters(pathSegments).addQueryParameters(queryParameters).
-                  addFormParameters(formFields).addHeaders(reqHeaders).addMethod(req.method.value).addUser(user)
+            extractRequest { req =>
+              implicit val reqHeaders = req.headers.filter(h => h.name() != "Authorization")
+              val params = Parameters().addUrlParameters(pathSegments).addQueryParameters(queryParameters).
+                addHeaders(reqHeaders).addMethod(req.method.value).addUser(user)
+              formFieldMultiMap { formFields =>
+                params.addFormParameters(formFields)
                 if (req.getHeader("InTouch-Debug").isPresent &&
                   req.getHeader("InTouch-Debug").get.value() == "true" && user.privileges.contains("ADMIN")) {
                   log.info("DEBUG MODE: ON - not service was called")
@@ -59,29 +61,29 @@ object InTouch {
                 } else {
                   val r = distpacher ? params
                   complete {
-                    r.map {
+                    r.map[ToResponseMarshallable] {
                       case resp: BasicResponse => HttpResponse(status = resp.code, entity = HttpEntity(resp.message))
-                      case resp: PayloadResponse => HttpResponse(status = resp.code, entity = HttpEntity(resp.payload.toString))
+                      case resp: DBPayloadResponse => resp
                     }
                   }
                 }
-              }
+              }~
+                entity(as[Parameters]) { data =>
+                  // formFieldMultiMap { }
+                  complete(s"$data")
+                }
             }
           }
         }
       }
 
     val password: Array[Char] = config.getString("InTouch.cert.password").toCharArray
-
     val ks: KeyStore = KeyStore.getInstance("PKCS12")
     val keystore: InputStream = getClass.getClassLoader.getResourceAsStream(config.getString("InTouch.cert.file"))
-
     require(keystore != null, "Keystore required!")
     ks.load(keystore, password)
-
     val keyManagerFactory: KeyManagerFactory = KeyManagerFactory.getInstance("SunX509")
     keyManagerFactory.init(ks, password)
-
     val tmf: TrustManagerFactory = TrustManagerFactory.getInstance("SunX509")
     tmf.init(ks)
     val sslContext: SSLContext = SSLContext.getInstance("TLS")
