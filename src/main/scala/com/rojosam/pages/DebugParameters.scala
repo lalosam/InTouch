@@ -18,7 +18,7 @@ object DebugParameters {
         if(iterableData.nonEmpty) {
           val t = for (d <- iterableData)
             yield td(style := valueStyle)(d.toString)
-          (iterableData.size, t)
+          (iterableData.size, t.toSeq)
         }else{
           (1, Seq(td(style := valueStyle)(" < EMPTY >")))
         }

@@ -42,7 +42,7 @@ class InTouchDistpacher(services: Seq[InTouchService]) extends Actor with ActorL
     }
   }
 
-  log.error(groupOfServices.toString())
+  log.info(groupOfServices.toString())
   log.info(servicesMap.toString())
 
   @scala.throws[Exception](classOf[Exception])

@@ -1,13 +1,16 @@
 package com.rojosam.sql
 
+import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ArrayBuffer
 
 
 object SqlParser {
 
+  val log = LoggerFactory.getLogger("com.rojosam.sql.SqlParser")
+
   def parse(query:String, parameters:Map[String, List[String]]):Option[(String, Iterable[Any])] ={
-    println()
-    println(query)
+    log.debug(query)
     val params = ArrayBuffer[Any]()
     var foundCurrency = false
     var isParameter = false
@@ -50,8 +53,8 @@ object SqlParser {
         finalQuery.append(c)
       }
     }
-    println(finalQuery)
-    println(params)
+    log.info(finalQuery.toString())
+    log.info(params.mkString(", "))
     Some(finalQuery.toString(), params)
   }
 

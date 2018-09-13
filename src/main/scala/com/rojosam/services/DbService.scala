@@ -7,8 +7,6 @@ import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
 import java.sql.{Connection, SQLException}
 
-import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
-
 import collection.JavaConversions._
 import com.rojosam.sql.SqlParser
 

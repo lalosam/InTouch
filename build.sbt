@@ -25,7 +25,7 @@ libraryDependencies ++=  {
     "org.apache.logging.log4j" %  "log4j-api"                         % log4jVersion,
     "org.apache.logging.log4j" %  "log4j-slf4j-impl"                  % log4jVersion,
     "org.apache.tomcat"        %  "tomcat-jdbc"                       % "8.5.4",
-    "mysql"                    %  "mysql-connector-java"              % "5.1.17"
+    "mysql"                    %  "mysql-connector-java"              % "8.0.12"
   )
 }
 
