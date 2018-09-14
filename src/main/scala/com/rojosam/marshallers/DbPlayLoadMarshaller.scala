@@ -87,9 +87,9 @@ trait DbPlayLoadMarshaller {
   }
 
   def dbPayLoadToHTML(payload:ResultSet.DbPayLoad):String = {
-    val headerStyle = "text-align:center; background-color:#084B8A; color: #EFEFEF;"
-    val valueStyle1 = "text-align:left; background-color:#EDEDED; color: #0C2262;"
-    val valueStyle2 = "text-align:left; background-color:#CDCDCD; color: #0C2262;"
+    val headerStyle = "text-align:center; background-color:#084B8A; color: #EFEFEF; font-size: 10px;"
+    val valueStyle1 = "text-align:left; background-color:#EDEDED; color: #0C2262; font-size: 10px;"
+    val valueStyle2 = "text-align:left; background-color:#CDCDCD; color: #0C2262; font-size: 10px;"
 
     html(
       table(
