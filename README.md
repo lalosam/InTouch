@@ -82,5 +82,7 @@ You should add an exception in your browser to allow use SSL layer with a self-s
 
 #### Database Schema
 
-[![Database Schema] (https://raw.githubusercontent.com/lalosam/InTouch/master/vs_challenge_diagram.png)]
+[![Database Schema](https://raw.githubusercontent.com/lalosam/InTouch/master/vs_challenge_diagram.png)]
+
+[![Run in Postman](https://run.pstmn.io/button.svg)]
   
