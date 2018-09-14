@@ -50,7 +50,7 @@ To generate the example schema and populate it with test data you need to execut
  
 ##### Build and execute
 
-Before build the project be sure that the file InTouch/src/main/resources/application.conf has the correct configuration: port, database connections and queries mainly.
+Before build the project be sure that the file **InTouch/src/main/resources/application.conf** has the correct configuration: port, database connections and queries mainly.
 
 To build the project, on the root folder run:
 
@@ -79,4 +79,8 @@ If you are requested for a user and password use:
 **PASSWORD:** p4ssw0rd
 
 You should add an exception in your browser to allow use SSL layer with a self-signed certificate.
+
+#### Database Schema
+
+![Database Schema] (https://raw.githubusercontent.com/lalosam/InTouch/master/vs_challenge_diagram.png)
   
