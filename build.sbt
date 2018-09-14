@@ -1,3 +1,5 @@
+import scala.util.Try
+
 name := "InTouch"
 
 version := "1.0"
@@ -5,6 +7,8 @@ version := "1.0"
 scalaVersion := "2.11.8"
 
 resolvers += sbt.Resolver.bintrayRepo("denigma", "denigma-releases") //add resolver
+
+val buildNumber = Try(sys.env("BUILD_NUMBER")).getOrElse("0000")
 
 mainClass in Compile := Some("com.rojosam.InTouch")
 
@@ -27,6 +31,15 @@ libraryDependencies ++=  {
     "org.apache.tomcat"        %  "tomcat-jdbc"                       % "8.5.4",
     "mysql"                    %  "mysql-connector-java"              % "8.0.12"
   )
+}
+
+
+assemblyJarName in assembly := s"${name.value}-${version.value}-${"%04d".format(buildNumber.toInt)}.jar"
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+  case "reference.conf" => MergeStrategy.concat
+  case _ => MergeStrategy.first
 }
 
 enablePlugins(SbtNativePackager)

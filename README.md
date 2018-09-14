@@ -47,4 +47,36 @@ To generate the example schema and populate it with test data you need to execut
 
  1. vs_challenge_schema.sql
  2. populate_data.sql
+ 
+##### Build and execute
 
+Before build the project be sure that the file InTouch/src/main/resources/application.conf has the correct configuration: port, database connections and queries mainly.
+
+To build the project, on the root folder run:
+
+    sbt assembly
+ 
+This command should create a fat-jar with the follow name:
+
+    InTouch/target/scala-2.11/InTouch-1.0-0000.jar
+    
+(In environments, like Jenkins, where there is a **BUILD_NUMBER** environment variable, the last four numbers could change)
+
+Execute the API services with this command:
+
+    java -jar InTouch-1.0-0000.jar
+
+You can test the service is running opening this page in a web browser:
+
+    https://localhost:9090/v1/vsChallenge/ticketsByEvent/162
+
+(change the host nd port properly)
+
+If you are requested for a user an password use:
+
+**USER:** nomatter
+
+**PASSWORD:** p4ssw0rd
+
+You should add an exception in your browser to allow use SSL layer with a self-signed certificate.
+  
