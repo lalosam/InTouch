@@ -27,7 +27,7 @@ The main idea of this project is to develop a generic API using conventions and 
 | Query Parameters | The parameters specified in the query could be replaced in the services requests. Like named parameters in the query string |
 
 
-##Included example
+### Included example
 
 To show the use of this framework it is included a database schema, test data and the API documentation.
 
@@ -37,11 +37,11 @@ You could change the database engine making the necessary adjustments.
 
 
 
-####API documentation
+##### API documentation
 
 https://documenter.getpostman.com/view/457563/RWaKTTx3
 
-####Database schema and data
+##### Database schema and data
 
 To generate the example schema and populate it with test data you need to execute the follow scripts (in the root folder of the repository) in order:
 
