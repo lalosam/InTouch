@@ -66,13 +66,13 @@ Execute the API services with this command:
 
     java -jar InTouch-1.0-0000.jar
 
-You can test the service is running opening this page in a web browser:
+You can test if the service is running opening this page in a web browser:
 
     https://localhost:9090/v1/vsChallenge/ticketsByEvent/162
 
-(change the host nd port properly)
+(change the host and port properly)
 
-If you are requested for an user and password use:
+If you are requested for an user and a password type:
 
 **USER:** nomatter
 
