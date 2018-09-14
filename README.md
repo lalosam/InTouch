@@ -41,6 +41,14 @@ You could change the database engine making the necessary adjustments.
 
 https://documenter.getpostman.com/view/457563/RWaKTTx3
 
+Since current project is ussing a self-signed SSL certificate, it is necesary to allow NOT secure connections to reach the API.
+
+In a browser you just need to add a security exception to allow the current certificate.
+
+If you are using cURL please add the __--insecure__ flag to the command.
+
+For a different client please review its documentation.
+
 ##### Database schema and data
 
 To generate the example schema and populate it with test data you need to execute the follow scripts (in the root folder of the repository) in order:
