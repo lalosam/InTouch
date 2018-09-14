@@ -72,7 +72,7 @@ You can test the service is running opening this page in a web browser:
 
 (change the host nd port properly)
 
-If you are requested for a user and password use:
+If you are requested for an user and password use:
 
 **USER:** nomatter
 
