@@ -45,6 +45,6 @@ https://documenter.getpostman.com/view/457563/RWaKTTx3
 
 To generate the example schema and populate it with test data you need to execute the follow scripts (in the root folder of the repository) in order:
 
-1.- vs_challenge_schema.sql
-2.- populate_data.sql
+ 1. vs_challenge_schema.sql
+ 2. populate_data.sql
 
