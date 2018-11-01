@@ -1,0 +1,11 @@
+# An example Dockerfile for installing Git on Ubuntu
+FROM mysql:8
+MAINTAINER "lalosam369@gmail.com"
+COPY ["./vs_challenge_schema.sql", "/scripts/vs_challenge_schema.sql"]
+COPY ["populate_data.sql", "/scripts/populate_data.sql"]
+COPY ["create_data.sh", "/scripts/create_data.sh"]
+RUN chmod +x /scripts/create_data.sh
+# docker build -f mysql.df -t local/mysql-vs:1.0 .
+# docker run -d --name mysqlvs -e MYSQL_ROOT_PASSWORD=rootroot -p 3306:3306 -p 33060:33060 local/mysql-vs:1.0
+# After run a container (wait until the database be running), initilize the DB with sample data executing the follow commands in a terminal
+# docker exec -ti mysqlvs sh -c "/scripts/create_data.sh"

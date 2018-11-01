@@ -2,9 +2,11 @@ package com.rojosam
 
 import java.io.InputStream
 import java.security.{KeyStore, SecureRandom}
-import javax.net.ssl._
 
+import akka.Done
+import javax.net.ssl._
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.marshalling.{Marshal, ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
@@ -22,11 +24,13 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.io.StdIn
 import collection.JavaConversions._
+import scala.concurrent.{Await, Future, Promise}
 
 object InTouch extends DbPlayLoadMarshaller with Unmarshallers{
 
   val log = LoggerFactory.getLogger("com.rojosam.InTouch")
 
+  var bindigFuture:Future[ServerBinding] = null
 
   def main(args: Array[String]) {
 
@@ -90,14 +94,27 @@ object InTouch extends DbPlayLoadMarshaller with Unmarshallers{
     sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
     val https: HttpsConnectionContext = ConnectionContext.https(sslContext)
     Http().setDefaultServerHttpContext(https)
-    val bindingFuture = Http().bindAndHandle(route, host, port)
+
+
+
+    val f = for {
+      bindigFuture <- Http().bindAndHandle(route, host, port)
+      waitOnFuture  <- Promise[Done].future
+    } yield waitOnFuture
+
+    sys.addShutdownHook {
+      InTouch.bindigFuture
+        .flatMap(_.unbind()) // trigger unbinding from the port
+        .onComplete(_ => system.terminate()) // and shutdown when done
+    }
+    Await.ready(f, Duration.Inf)
+
+    // val bindingFuture = Http().bindAndHandle(route, host, port)
 
     log.info(s"Server online at http://$host:$port/\nPress RETURN to stop...")
     StdIn.readLine() // let it run until user presses return
-    bindingFuture
-      .flatMap(_.unbind()) // trigger unbinding from the port
-      .onComplete(_ => system.terminate()) // and shutdown when done
   }
+
 
 
 }

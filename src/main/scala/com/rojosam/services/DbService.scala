@@ -31,7 +31,7 @@ class DbService(service: DBService) extends Actor with ActorLogging {
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
-    log.error("****     Creating a DB Service")
+    log.info("****     Creating a DB Service")
     val p = new PoolProperties()
     p.setUrl(service.url)
     p.setDriverClassName(service.driverClassName)

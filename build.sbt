@@ -6,11 +6,18 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
+organization := "lalosam"
+organizationName := "Lalosam"
+startYear := Some(2015)
+maintainer := "lalosam369@gmail.com"
+
 resolvers += sbt.Resolver.bintrayRepo("denigma", "denigma-releases") //add resolver
 
 val buildNumber = Try(sys.env("BUILD_NUMBER")).getOrElse("0000")
 
 mainClass in Compile := Some("com.rojosam.InTouch")
+
+enablePlugins(SbtNativePackager, JavaAppPackaging, DockerPlugin)
 
 libraryDependencies ++=  {
   val AkkaVersion       = "2.4.8"
@@ -23,6 +30,7 @@ libraryDependencies ++=  {
     "com.typesafe.akka"        %% "akka-http-spray-json-experimental" % AkkaVersion,
     "com.typesafe.akka"        %% "akka-slf4j"                        % AkkaVersion,
     "org.denigma"              %% "akka-http-extensions"              % "0.0.13",
+    "com.typesafe.akka"        %% "akka-remote"                       % AkkaVersion,
     "com.lihaoyi"              %% "scalatags"                         % "0.6.0",
     "org.json4s"               %% "json4s-native"                     % Json4sVersion,
     "org.apache.logging.log4j" %  "log4j-core"                        % log4jVersion,
@@ -42,4 +50,6 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
-enablePlugins(SbtNativePackager)
+dockerRepository := Some("lalosam")
+dockerUpdateLatest := true
+dockerBaseImage := "openjdk:8"
